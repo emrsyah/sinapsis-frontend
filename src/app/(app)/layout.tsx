@@ -64,7 +64,6 @@ function Sidebar1({
       // Kalau belum login, tendang ke page auth
       router.push("/auth")
     } else {
-      // Nanti di sini lu bisa tambahin logika dari backend buat bikin note beneran
       console.log("Klik nambah note baru")
     }
   }
