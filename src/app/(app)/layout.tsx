@@ -22,6 +22,7 @@ import { FOLDERS, NOTES, TRASH_NOTES, type Note } from "@/lib/data"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
+import { TagSection } from "@/components/tag-section/tag-section"
 
 // ---------------------------------------------------------------------------
 // Sidebar 1
@@ -98,52 +99,60 @@ function Sidebar1({
 
       <Separator />
 
-      {/* Notes expandable */}
-      <div className="flex flex-col px-2 py-2 flex-1 overflow-hidden">
-        <button
-          onClick={() => setNotesOpen((v) => !v)}
-          className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors"
-        >
-          {notesOpen ? (
-            <ChevronDown className="h-3.5 w-3.5 shrink-0" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 shrink-0" />
-          )}
-          <FileText className="h-4 w-4 shrink-0" />
-          <span className="flex-1 text-left">Notes</span>
-          <span
-            role="button"
-            className="flex h-5 w-5 items-center justify-center rounded hover:bg-sidebar-accent"
-            onClick={(e) => e.stopPropagation()}
+      {/* Notes + Tags shared area */}
+      <div className="flex flex-1 flex-col overflow-hidden">
+        {/* Notes expandable */}
+        <div className={cn("flex flex-col px-2 py-2", notesOpen ? "flex-1 overflow-hidden" : "shrink-0")}>
+          <button
+            onClick={() => setNotesOpen((v) => !v)}
+            className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors"
           >
-            <Plus className="h-3 w-3" />
-          </span>
-        </button>
+            {notesOpen ? (
+              <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+            )}
+            <FileText className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left">Notes</span>
+            <span
+              role="button"
+              className="flex h-5 w-5 items-center justify-center rounded hover:bg-sidebar-accent"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Plus className="h-3 w-3" />
+            </span>
+          </button>
 
-        {notesOpen && (
-          <div className="mt-0.5 flex flex-col gap-0.5 overflow-y-auto pl-2">
-            {FOLDERS.map((folder) => {
-              const isActive = activeFolderId === folder.id
-              const count = NOTES.filter((n) => n.folderId === folder.id).length
-              return (
-                <button
-                  key={folder.id}
-                  onClick={() => goFolder(folder.id)}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
-                  )}
-                >
-                  <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                  <span className="flex-1 truncate text-left">{folder.label}</span>
-                  <span className="text-[10px] text-muted-foreground/50">{count}</span>
-                </button>
-              )
-            })}
-          </div>
-        )}
+          {notesOpen && (
+            <div className="mt-0.5 flex flex-col gap-0.5 overflow-y-auto pl-2">
+              {FOLDERS.map((folder) => {
+                const isActive = activeFolderId === folder.id
+                const count = NOTES.filter((n) => n.folderId === folder.id).length
+                return (
+                  <button
+                    key={folder.id}
+                    onClick={() => goFolder(folder.id)}
+                    className={cn(
+                      "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                      isActive
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                        : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+                    )}
+                  >
+                    <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                    <span className="flex-1 truncate text-left">{folder.label}</span>
+                    <span className="text-[10px] text-muted-foreground/50">{count}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
+        <Separator />
+
+        {/* Tags */}
+        <TagSection />
       </div>
 
       <Separator />
