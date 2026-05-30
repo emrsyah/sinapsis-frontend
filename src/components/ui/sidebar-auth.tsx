@@ -34,7 +34,7 @@ export function SidebarAuth() {
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="w-full justify-start h-auto p-2 hover:bg-white/10">
           <Avatar className="h-8 w-8 mr-3">
-            <AvatarImage src={user.avatar_url} alt={user.name} />
+            <AvatarImage src={user.image ?? undefined} alt={user.name} />
             <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
           </Avatar>
           <div className="flex flex-col items-start text-left overflow-hidden">

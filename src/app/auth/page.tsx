@@ -3,18 +3,12 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { useAuthStore } from '@/stores/authStore'
-import { useRouter } from 'next/navigation'
 
 export default function AuthPage() {
-  const login = useAuthStore((state) => state.login)
-  const router = useRouter()
-  
-  // State untuk nge-track lagi di mode Login (true) atau Sign Up (false)
   const [isLogin, setIsLogin] = useState(true)
 
   const handleGoogleAuth = () => {
-    window.location.href = 'http://127.0.0.1:8000/auth/google/callback'
+    window.location.href = 'http://127.0.0.1:8000/api/v1/auth/login'
   }
 
   return (

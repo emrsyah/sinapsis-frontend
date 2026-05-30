@@ -3,10 +3,10 @@
 import { z } from 'zod'
 
 export const UserSchema = z.object({
-    id: z.string().uuid(),
+    user_id: z.string().uuid(),
     name: z.string(),
     email: z.string().email(),
-    avatar_url: z.string().url().nullable(),
+    image: z.string().url().nullable(),
     last_opened_note_id: z.string().uuid().nullable(),
     created_at: z.string(),
     updated_at: z.string(),
@@ -14,7 +14,7 @@ export const UserSchema = z.object({
 
 export const UpdateUserSchema = z.object({
     name: z.string().min(1).max(255).optional(),
-    avatar_url: z.string().url().nullable().optional(),
+    image: z.string().url().nullable().optional(),
 })
 
 export const UpdateLastOpenedSchema = z.object({

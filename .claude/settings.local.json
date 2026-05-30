@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bunx shadcn@latest add tabs card badge scroll-area progress --yes)"
+      "Bash(bunx shadcn@latest add tabs card badge scroll-area progress --yes)",
+      "PowerShell(ls \"C:\\\\Users\\\\emirsyah\\\\Documents\\\\CODING\\\\ABP\\\\TUGAS BESAR\\\\\")"
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "neon"
+  ]
 }
