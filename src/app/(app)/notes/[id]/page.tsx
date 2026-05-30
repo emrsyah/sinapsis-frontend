@@ -6,6 +6,7 @@ import { AiPanel } from "@/components/ai-panel"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
 import { NoteTagSelector } from "@/components/note/note-tag-selector"
 import { NoteBacklinksPanel } from "@/components/note/note-backlinks-panel"
+import { NoteShareToggle } from "@/components/note/note-share-toggle"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -45,9 +46,10 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="flex h-full overflow-hidden">
       <div className="flex flex-1 flex-col overflow-y-auto">
-        {/* Tags bar */}
-        <div className="px-8 pt-4 pb-2">
+        {/* Toolbar */}
+        <div className="flex items-center justify-between px-8 pt-4 pb-2">
           <NoteTagSelector noteId={id} attachedTags={note.tags ?? []} />
+          <NoteShareToggle note={note} />
         </div>
 
         {/* Editor */}

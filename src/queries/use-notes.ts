@@ -195,3 +195,35 @@ export function useDeleteNoteLink(noteId: string) {
     },
   })
 }
+
+// ---------------------------------------------------------------------------
+// Publishing / sharing
+// ---------------------------------------------------------------------------
+
+export function usePublishNote(noteId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => api.post<Note>(`/v1/notes/${noteId}/publish`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) })
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : 'Failed to publish note')
+    },
+  })
+}
+
+export function useUnpublishNote(noteId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: () => api.delete(`/v1/notes/${noteId}/publish`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) })
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : 'Failed to unpublish note')
+    },
+  })
+}
