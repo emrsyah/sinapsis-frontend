@@ -41,3 +41,7 @@ export function disconnectEcho() {
   echo?.disconnect()
   echo = null
 }
+
+export function getEchoSocketId(): string | null {
+  return echo?.socketId() ?? null
+}

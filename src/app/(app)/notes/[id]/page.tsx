@@ -17,9 +17,6 @@ type SaveStatus = "idle" | "saving" | "saved"
 
 function SaveStatusIndicator({ status, lastSaved }: { status: SaveStatus; lastSaved: Date | null }) {
   function formatLastSaved(date: Date) {
-    const diff = Math.floor((Date.now() - date.getTime()) / 1000)
-    if (diff < 60) return "just now"
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
     return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
   }
 
@@ -61,15 +58,8 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
   const [lastSaved, setLastSaved] = useState<Date | null>(null)
-  const [titleValue, setTitleValue] = useState<string>("")
-  const titleInitialized = useRef(false)
-
-  useEffect(() => {
-    if (note && !titleInitialized.current) {
-      setTitleValue(note.title ?? "")
-      titleInitialized.current = true
-    }
-  }, [note])
+  const [draftTitle, setDraftTitle] = useState<string | null>(null)
+  const [contentDirty, setContentDirty] = useState(false)
 
   const scheduleUpdate = useCallback((patch: { title?: string; content?: string }) => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -77,6 +67,10 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
     saveTimer.current = setTimeout(() => {
       updateNote(patch, {
         onSuccess: () => {
+          if (patch.title !== undefined) {
+            setDraftTitle(null)
+          }
+          if (patch.content !== undefined) setContentDirty(false)
           setSaveStatus("saved")
           setLastSaved(new Date())
           setTimeout(() => setSaveStatus("idle"), 2000)
@@ -116,9 +110,9 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
         <div className="px-8 pt-5 pb-1">
           <input
             type="text"
-            value={titleValue}
+            value={draftTitle ?? note.title ?? ""}
             onChange={(e) => {
-              setTitleValue(e.target.value)
+              setDraftTitle(e.target.value)
               scheduleUpdate({ title: e.target.value })
             }}
             placeholder="Untitled"
@@ -167,8 +161,12 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
         <div className="flex-1 min-h-0">
           <SimpleEditor
             content={note.content ?? null}
-            onChange={(html) => scheduleUpdate({ content: html })}
+            onChange={(html) => {
+              setContentDirty(true)
+              scheduleUpdate({ content: html })
+            }}
             noteId={id}
+            allowRemoteContentSync={!contentDirty}
           />
         </div>
 

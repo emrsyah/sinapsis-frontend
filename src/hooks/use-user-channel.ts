@@ -3,8 +3,11 @@
 import { useEffect } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/stores/authStore'
-import { getEcho, disconnectEcho } from '@/lib/echo'
+import { getEcho } from '@/lib/echo'
 import { noteKeys } from '@/queries/use-notes'
+import type { Note } from '@/types'
+
+type NoteUpdatedPayload = Partial<Note> & { id?: string }
 
 export function useUserChannel() {
   const { user, token } = useAuthStore()
@@ -21,9 +24,12 @@ export function useUserChannel() {
       .listen('.note.created', () => {
         queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
       })
-      .listen('.note.updated', (data: { id?: string }) => {
-        if (data.id) {
-          queryClient.invalidateQueries({ queryKey: noteKeys.detail(data.id) })
+      .listen('.note.updated', (data: NoteUpdatedPayload) => {
+        const noteId = data.id
+        if (noteId) {
+          queryClient.setQueryData<Note | undefined>(noteKeys.detail(noteId), (current) =>
+            current ? { ...current, ...data, id: noteId } : current
+          )
         }
         queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
       })

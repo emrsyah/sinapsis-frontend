@@ -27,13 +27,23 @@ type GeneratePayload = {
   noteId: string
   content: string
   type: StudyToolType
+  options?: StudyToolGenerationOptions
+}
+
+export type StudyToolGenerationOptions = {
+  amount?: number
+  focus?: string
+  difficulty?: 'easy' | 'medium' | 'hard'
+  answerStyle?: 'concise' | 'detailed'
+  branchCount?: number
+  depth?: 'overview' | 'balanced' | 'detailed'
 }
 
 async function generateAndSave(payload: GeneratePayload): Promise<StudyTool> {
   const aiResult = await fetch(`/api/ai/${payload.type}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: payload.content }),
+    body: JSON.stringify({ content: payload.content, options: payload.options }),
   })
 
   if (!aiResult.ok) {
@@ -54,7 +64,7 @@ export function useGenerateStudyTool(noteId: string) {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (vars: { content: string; type: StudyToolType }) =>
+    mutationFn: (vars: { content: string; type: StudyToolType; options?: StudyToolGenerationOptions }) =>
       generateAndSave({ ...vars, noteId }),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: studyToolKeys.byType(noteId, vars.type) })

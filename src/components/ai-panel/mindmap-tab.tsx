@@ -73,22 +73,74 @@ const DEPTH_COLORS = [
 ]
 
 function MindMapSvg({ root }: { root: UiMindMapNode }) {
+  const scrollRef = React.useRef<HTMLDivElement>(null)
+  const dragRef = React.useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0,
+    scrollTop: 0,
+  })
   const { height, positioned } = measureTree(root, 0)
   const allNodes = collectNodes(positioned)
   const maxX = Math.max(...allNodes.map((n) => n.x + NODE_W))
-  const svgW = maxX + 8
-  const svgH = height + 8
+  const canvasPadding = 48
+  const svgW = maxX + canvasPadding * 2
+  const svgH = height + canvasPadding * 2
 
   function offset(n: PositionedNode, dy: number): PositionedNode {
     return { ...n, y: n.y + dy, children: n.children.map((c) => offset(c, dy)) }
   }
-  const tree = offset(positioned, (svgH - height) / 2)
+  const tree = offset(positioned, canvasPadding)
   const edges = collectEdges(tree)
   const nodes = collectNodes(tree)
 
+  function handlePointerDown(event: React.PointerEvent<HTMLDivElement>) {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) return
+
+    dragRef.current = {
+      active: true,
+      startX: event.clientX,
+      startY: event.clientY,
+      scrollLeft: scrollEl.scrollLeft,
+      scrollTop: scrollEl.scrollTop,
+    }
+    scrollEl.setPointerCapture(event.pointerId)
+  }
+
+  function handlePointerMove(event: React.PointerEvent<HTMLDivElement>) {
+    const scrollEl = scrollRef.current
+    if (!scrollEl || !dragRef.current.active) return
+
+    scrollEl.scrollLeft = dragRef.current.scrollLeft - (event.clientX - dragRef.current.startX)
+    scrollEl.scrollTop = dragRef.current.scrollTop - (event.clientY - dragRef.current.startY)
+  }
+
+  function handlePointerUp(event: React.PointerEvent<HTMLDivElement>) {
+    const scrollEl = scrollRef.current
+    dragRef.current.active = false
+    if (scrollEl?.hasPointerCapture(event.pointerId)) {
+      scrollEl.releasePointerCapture(event.pointerId)
+    }
+  }
+
   return (
-    <div className="overflow-auto">
-      <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} className="block">
+    <div
+      ref={scrollRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      className="h-full w-full cursor-grab select-none overflow-scroll overscroll-contain active:cursor-grabbing"
+    >
+      <svg
+        width={svgW}
+        height={svgH}
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        className="block max-w-none"
+        style={{ minWidth: svgW, minHeight: svgH }}
+      >
         {edges.map((e, i) => {
           const mx = (e.x1 + e.x2) / 2
           return (
@@ -174,7 +226,7 @@ export function MindMapTab({ content, isLoading, onGenerate }: MindMapTabProps) 
           <RotateCw className="h-3 w-3" />
         </Button>
       </div>
-      <div className="rounded-xl border bg-card p-3">
+      <div className="h-[min(520px,calc(100vh-260px))] min-h-[360px] rounded-xl border bg-card p-3">
         <MindMapSvg root={root} />
       </div>
       <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">

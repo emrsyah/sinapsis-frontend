@@ -10,6 +10,16 @@ import {
   Paperclip,
   Sparkles,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -20,8 +30,8 @@ import { MindMapTab } from "./mindmap-tab"
 import { ChatTab } from "./chat-tab"
 import { NoteAttachmentsPanel } from "@/components/note/note-attachments-panel"
 import { useNote } from "@/queries/use-notes"
-import { useGenerateStudyTool, useStudyTool } from "@/queries/use-study-tools"
-import type { FlashcardContent, MindMapContent, QuizContent } from "@/types"
+import { useGenerateStudyTool, useStudyTool, type StudyToolGenerationOptions } from "@/queries/use-study-tools"
+import type { FlashcardContent, MindMapContent, QuizContent, StudyToolType } from "@/types"
 
 interface AiPanelProps {
   noteId: string
@@ -32,9 +42,192 @@ const DEFAULT_PANEL_WIDTH = 380
 const MAX_PANEL_WIDTH = 520
 const COLLAPSED_WIDTH = 44
 
+type GenerationForm = {
+  amount: number
+  branchCount: number
+  focus: string
+  difficulty: NonNullable<StudyToolGenerationOptions['difficulty']>
+  answerStyle: NonNullable<StudyToolGenerationOptions['answerStyle']>
+  depth: NonNullable<StudyToolGenerationOptions['depth']>
+}
+
+const DEFAULT_GENERATION_FORM: GenerationForm = {
+  amount: 6,
+  branchCount: 5,
+  focus: "",
+  difficulty: "medium",
+  answerStyle: "concise",
+  depth: "balanced",
+}
+
+const TOOL_LABELS: Record<StudyToolType, string> = {
+  flashcard: "Flashcards",
+  quiz: "Quiz",
+  mindmap: "Mind map",
+}
+
+function clamp(value: number, min: number, max: number) {
+  if (!Number.isFinite(value)) return min
+  return Math.min(max, Math.max(min, Math.round(value)))
+}
+
+function buildGenerationOptions(type: StudyToolType, form: GenerationForm): StudyToolGenerationOptions {
+  const common = form.focus.trim() ? { focus: form.focus.trim() } : {}
+
+  if (type === "flashcard") {
+    return {
+      ...common,
+      amount: clamp(form.amount, 3, 20),
+      answerStyle: form.answerStyle,
+    }
+  }
+
+  if (type === "quiz") {
+    return {
+      ...common,
+      amount: clamp(form.amount, 3, 20),
+      difficulty: form.difficulty,
+    }
+  }
+
+  return {
+    ...common,
+    branchCount: clamp(form.branchCount, 2, 10),
+    depth: form.depth,
+  }
+}
+
+interface GenerationDialogProps {
+  type: StudyToolType | null
+  form: GenerationForm
+  isGenerating: boolean
+  onOpenChange: (open: boolean) => void
+  onFormChange: (form: GenerationForm) => void
+  onSubmit: () => void
+}
+
+function GenerationDialog({
+  type,
+  form,
+  isGenerating,
+  onOpenChange,
+  onFormChange,
+  onSubmit,
+}: GenerationDialogProps) {
+  const open = type !== null
+
+  function update<K extends keyof GenerationForm>(key: K, value: GenerationForm[K]) {
+    onFormChange({ ...form, [key]: value })
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Customize {type ? TOOL_LABELS[type] : "study tool"}</DialogTitle>
+          <DialogDescription>
+            Adjust the generated result before creating it from this note.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4">
+          {type !== "mindmap" ? (
+            <label className="grid gap-2 text-sm font-medium">
+              Amount
+              <Input
+                type="number"
+                min={3}
+                max={20}
+                value={form.amount}
+                onChange={(event) => update("amount", clamp(Number(event.target.value), 3, 20))}
+              />
+            </label>
+          ) : (
+            <label className="grid gap-2 text-sm font-medium">
+              Main branches
+              <Input
+                type="number"
+                min={2}
+                max={10}
+                value={form.branchCount}
+                onChange={(event) => update("branchCount", clamp(Number(event.target.value), 2, 10))}
+              />
+            </label>
+          )}
+
+          {type === "flashcard" && (
+            <label className="grid gap-2 text-sm font-medium">
+              Answer style
+              <select
+                value={form.answerStyle}
+                onChange={(event) => update("answerStyle", event.target.value as GenerationForm["answerStyle"])}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="concise">Concise</option>
+                <option value="detailed">Detailed</option>
+              </select>
+            </label>
+          )}
+
+          {type === "quiz" && (
+            <label className="grid gap-2 text-sm font-medium">
+              Difficulty
+              <select
+                value={form.difficulty}
+                onChange={(event) => update("difficulty", event.target.value as GenerationForm["difficulty"])}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="hard">Hard</option>
+              </select>
+            </label>
+          )}
+
+          {type === "mindmap" && (
+            <label className="grid gap-2 text-sm font-medium">
+              Detail level
+              <select
+                value={form.depth}
+                onChange={(event) => update("depth", event.target.value as GenerationForm["depth"])}
+                className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-xs outline-none transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+              >
+                <option value="overview">Overview</option>
+                <option value="balanced">Balanced</option>
+                <option value="detailed">Detailed</option>
+              </select>
+            </label>
+          )}
+
+          <label className="grid gap-2 text-sm font-medium">
+            Focus
+            <textarea
+              value={form.focus}
+              onChange={(event) => update("focus", event.target.value)}
+              placeholder="Optional: formulas, definitions, weak points, exam topics..."
+              className="min-h-20 resize-none rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+          </label>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isGenerating}>
+            Cancel
+          </Button>
+          <Button onClick={onSubmit} disabled={isGenerating}>
+            {isGenerating ? "Generating..." : "Generate"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function AiPanel({ noteId }: AiPanelProps) {
   const [open, setOpen] = React.useState(true)
   const [panelWidth, setPanelWidth] = React.useState(DEFAULT_PANEL_WIDTH)
+  const [generationType, setGenerationType] = React.useState<StudyToolType | null>(null)
+  const [generationForm, setGenerationForm] = React.useState<GenerationForm>(DEFAULT_GENERATION_FORM)
   const { data: note } = useNote(noteId)
 
   const { data: flashcardTool, isLoading: flashcardsLoading } = useStudyTool(noteId, 'flashcard')
@@ -45,6 +238,25 @@ export function AiPanel({ noteId }: AiPanelProps) {
 
   const noteContent = note?.content ?? ''
   const noteTitle = note?.title?.trim() || "Untitled note"
+
+  function openGenerationDialog(type: StudyToolType) {
+    setGenerationType(type)
+  }
+
+  function submitGeneration() {
+    if (!generationType) return
+
+    generate(
+      {
+        content: noteContent,
+        type: generationType,
+        options: buildGenerationOptions(generationType, generationForm),
+      },
+      {
+        onSuccess: () => setGenerationType(null),
+      }
+    )
+  }
 
   const startResize = React.useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -162,7 +374,7 @@ export function AiPanel({ noteId }: AiPanelProps) {
                   <FlashcardTab
                     content={flashcardTool?.content as FlashcardContent | undefined}
                     isLoading={flashcardsLoading || (generating && generateVars?.type === 'flashcard')}
-                    onGenerate={() => generate({ content: noteContent, type: 'flashcard' })}
+                    onGenerate={() => openGenerationDialog('flashcard')}
                   />
                 </ScrollArea>
               </TabsContent>
@@ -172,7 +384,7 @@ export function AiPanel({ noteId }: AiPanelProps) {
                   <QuizTab
                     content={quizTool?.content as QuizContent | undefined}
                     isLoading={quizLoading || (generating && generateVars?.type === 'quiz')}
-                    onGenerate={() => generate({ content: noteContent, type: 'quiz' })}
+                    onGenerate={() => openGenerationDialog('quiz')}
                   />
                 </ScrollArea>
               </TabsContent>
@@ -182,7 +394,7 @@ export function AiPanel({ noteId }: AiPanelProps) {
                   <MindMapTab
                     content={mindmapTool?.content as MindMapContent | undefined}
                     isLoading={mindmapLoading || (generating && generateVars?.type === 'mindmap')}
-                    onGenerate={() => generate({ content: noteContent, type: 'mindmap' })}
+                    onGenerate={() => openGenerationDialog('mindmap')}
                   />
                 </ScrollArea>
               </TabsContent>
@@ -194,6 +406,17 @@ export function AiPanel({ noteId }: AiPanelProps) {
               </TabsContent>
             </div>
           </Tabs>
+
+          <GenerationDialog
+            type={generationType}
+            form={generationForm}
+            isGenerating={generating}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) setGenerationType(null)
+            }}
+            onFormChange={setGenerationForm}
+            onSubmit={submitGeneration}
+          />
         </>
       )}
     </div>

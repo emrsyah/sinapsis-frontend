@@ -1,4 +1,5 @@
 import { config } from './config'
+import { getEchoSocketId } from './echo'
 
 export class ApiError extends Error {
   constructor(
@@ -18,11 +19,13 @@ function getToken(): string | null {
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken()
+  const socketId = getEchoSocketId()
 
   const headers: HeadersInit = {
     Accept: 'application/json',
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(socketId ? { 'X-Socket-ID': socketId } : {}),
     ...init.headers,
   }
 

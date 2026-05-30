@@ -220,16 +220,19 @@ export function SimpleEditor({
   content,
   onChange,
   noteId,
+  allowRemoteContentSync = true,
 }: {
   content?: string | null
   onChange?: (html: string) => void
   noteId?: string
+  allowRemoteContentSync?: boolean
 }) {
   const isMobile = useIsBreakpoint()
   const { height } = useWindowSize()
   const [mobileView, setMobileView] = useState<"main" | "highlighter" | "link">(
     "main"
   )
+  const activeMobileView = isMobile ? mobileView : "main"
   const toolbarRef = useRef<HTMLDivElement>(null)
 
   const editor = useEditor({
@@ -277,16 +280,19 @@ export function SimpleEditor({
     },
   })
 
+  useEffect(() => {
+    if (!editor || !allowRemoteContentSync) return
+
+    const nextContent = content ?? ""
+    if (editor.getHTML() !== nextContent) {
+      editor.commands.setContent(nextContent, { emitUpdate: false })
+    }
+  }, [allowRemoteContentSync, content, editor])
+
   const rect = useCursorVisibility({
     editor,
-    overlayHeight: toolbarRef.current?.getBoundingClientRect().height ?? 0,
+    overlayHeight: 0,
   })
-
-  useEffect(() => {
-    if (!isMobile && mobileView !== "main") {
-      setMobileView("main")
-    }
-  }, [isMobile, mobileView])
 
   return (
     <div className="simple-editor-wrapper">
@@ -301,7 +307,7 @@ export function SimpleEditor({
               : {}),
           }}
         >
-          {mobileView === "main" ? (
+          {activeMobileView === "main" ? (
             <MainToolbarContent
               onHighlighterClick={() => setMobileView("highlighter")}
               onLinkClick={() => setMobileView("link")}
@@ -309,7 +315,7 @@ export function SimpleEditor({
             />
           ) : (
             <MobileToolbarContent
-              type={mobileView === "highlighter" ? "highlighter" : "link"}
+              type={activeMobileView === "highlighter" ? "highlighter" : "link"}
               onBack={() => setMobileView("main")}
             />
           )}
