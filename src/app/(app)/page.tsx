@@ -1,10 +1,56 @@
 'use client'
 
-import { Clock, FileText, Star } from "lucide-react"
+import * as React from "react"
+import { Clock, FileText } from "lucide-react"
 import { useNotes } from "@/queries/use-notes"
 import { useFolders } from "@/queries/use-folders"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuthStore } from "@/stores/authStore"
 import type { Note } from "@/types"
+
+const GREETINGS = {
+  morning: [
+    "Good morning",
+    "Morning focus",
+    "Start strong",
+    "Ready for today",
+  ],
+  afternoon: [
+    "Good afternoon",
+    "Keep the momentum",
+    "Afternoon focus",
+    "Back to your notes",
+  ],
+  evening: [
+    "Good evening",
+    "Evening review",
+    "Time to refine",
+    "Wrap it up well",
+  ],
+  night: [
+    "Working late",
+    "Night study mode",
+    "Quiet focus",
+    "Late-night review",
+  ],
+} as const
+
+function getTimeBucket(date: Date): keyof typeof GREETINGS {
+  const hour = date.getHours()
+  if (hour >= 5 && hour < 12) return "morning"
+  if (hour >= 12 && hour < 17) return "afternoon"
+  if (hour >= 17 && hour < 21) return "evening"
+  return "night"
+}
+
+function getGreeting(date: Date, name?: string) {
+  const bucket = getTimeBucket(date)
+  const variants = GREETINGS[bucket]
+  const variant = variants[(date.getDate() + date.getHours()) % variants.length]
+  const firstName = name?.trim().split(/\s+/)[0]
+
+  return firstName ? `${variant}, ${firstName}` : variant
+}
 
 function countFolders(folders: ReturnType<typeof useFolders>['data']): number {
   if (!folders) return 0
@@ -74,6 +120,13 @@ function NoteCardSkeleton() {
 export default function HomePage() {
   const { data: notes, isLoading } = useNotes()
   const { data: folders } = useFolders()
+  const user = useAuthStore((state) => state.user)
+  const [now, setNow] = React.useState(() => new Date())
+
+  React.useEffect(() => {
+    const interval = window.setInterval(() => setNow(new Date()), 60_000)
+    return () => window.clearInterval(interval)
+  }, [])
 
   function getFolderName(folderId: string | null): string {
     if (!folderId || !folders) return ""
@@ -90,10 +143,11 @@ export default function HomePage() {
 
   const folderCount = countFolders(folders)
   const recent = notes?.slice(0, 6) ?? []
+  const greeting = getGreeting(now, user?.name)
 
   return (
     <div className="flex-1 overflow-y-auto p-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-1">Good morning</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-1">{greeting}</h1>
       <p className="text-sm text-muted-foreground mb-8">
         {isLoading
           ? "Loading your notes..."
