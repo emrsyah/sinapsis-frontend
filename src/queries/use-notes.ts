@@ -12,6 +12,7 @@ export const noteKeys = {
 
 interface NotesFilters {
   folderId?: string
+  tagId?: string
   search?: string
   trash?: boolean
 }
@@ -22,6 +23,7 @@ export function useNotes(filters: NotesFilters = {}) {
     queryFn: () => {
       const params = new URLSearchParams()
       if (filters.folderId) params.set('folder_id', filters.folderId)
+      if (filters.tagId) params.set('tag_id', filters.tagId)
       if (filters.search) params.set('search', filters.search)
       if (filters.trash) params.set('trash', 'true')
       const qs = params.toString()

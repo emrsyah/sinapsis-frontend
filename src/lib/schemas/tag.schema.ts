@@ -8,6 +8,7 @@ export const TagSchema = z.object({
     name: z.string(),
     color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).nullable(), // hex color
     created_at: z.string(),
+    notes_count: z.number().default(0),
 })
 
 export const TagListSchema = z.array(TagSchema)

@@ -127,7 +127,7 @@ function EditTagDialogContent({ tag, onClose }: { tag: TagType; onClose: () => v
   )
 }
 
-function TagItem({ tag }: { tag: TagType }) {
+function TagItem({ tag, isActive, onSelect }: { tag: TagType; isActive: boolean; onSelect: (tag: TagType) => void }) {
   const { mutate: deleteTag } = useDeleteTag()
   const [editOpen, setEditOpen] = React.useState(false)
   const [hovered, setHovered] = React.useState(false)
@@ -141,7 +141,13 @@ function TagItem({ tag }: { tag: TagType }) {
       </Dialog>
 
       <button
-        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+        onClick={() => onSelect(tag)}
+        className={cn(
+          "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+          isActive
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+            : "text-sidebar-foreground/60 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground"
+        )}
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
@@ -168,14 +174,20 @@ function TagItem({ tag }: { tag: TagType }) {
             </span>
           </div>
         ) : (
-          <span className="text-[10px] text-muted-foreground/50">0</span>
+          <span className="text-[10px] text-muted-foreground/50">{tag.notes_count}</span>
         )}
       </button>
     </>
   )
 }
 
-export function TagSection() {
+export function TagSection({
+  activeTagId,
+  onTagSelect,
+}: {
+  activeTagId?: string | null
+  onTagSelect?: (tag: TagType) => void
+}) {
   const { data: tags, isLoading } = useTags()
   const [open, setOpen] = React.useState(true)
   const [addOpen, setAddOpen] = React.useState(false)
@@ -221,7 +233,14 @@ export function TagSection() {
                 Belum ada tag. Klik + untuk tambah.
               </p>
             ) : (
-              tags?.map((tag) => <TagItem key={tag.id} tag={tag} />)
+              tags?.map((tag) => (
+                <TagItem
+                  key={tag.id}
+                  tag={tag}
+                  isActive={activeTagId === tag.id}
+                  onSelect={onTagSelect ?? (() => {})}
+                />
+              ))
             )}
           </div>
         )}
