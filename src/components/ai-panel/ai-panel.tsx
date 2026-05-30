@@ -6,17 +6,18 @@ import {
   ChevronRight,
   Layers,
   Map,
+  Paperclip,
   Sparkles,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { getAiContent } from "./dummy-content"
 import { FlashcardTab } from "./flashcard-tab"
 import { QuizTab } from "./quiz-tab"
 import { MindMapTab } from "./mindmap-tab"
+import { NoteAttachmentsPanel } from "@/components/note/note-attachments-panel"
 
 interface AiPanelProps {
   noteId: string
@@ -46,7 +47,7 @@ export function AiPanel({ noteId }: AiPanelProps) {
         />
       </button>
 
-      {/* Collapsed state — vertical label */}
+      {/* Collapsed state */}
       {!open && (
         <div className="flex flex-1 flex-col items-center justify-center gap-3 py-4">
           <Sparkles className="h-4 w-4 text-muted-foreground" />
@@ -71,7 +72,7 @@ export function AiPanel({ noteId }: AiPanelProps) {
           <Separator />
 
           <Tabs defaultValue="flashcards" className="flex flex-1 flex-col overflow-hidden">
-            <TabsList className="mx-3 mt-2 mb-1 grid w-auto grid-cols-3 h-8">
+            <TabsList className="mx-3 mt-2 mb-1 grid w-auto grid-cols-4 h-8">
               <TabsTrigger value="flashcards" className="gap-1 text-[11px] px-1">
                 <Layers className="h-3 w-3" />
                 Cards
@@ -83,6 +84,10 @@ export function AiPanel({ noteId }: AiPanelProps) {
               <TabsTrigger value="mindmap" className="gap-1 text-[11px] px-1">
                 <Map className="h-3 w-3" />
                 Map
+              </TabsTrigger>
+              <TabsTrigger value="attachments" className="gap-1 text-[11px] px-1">
+                <Paperclip className="h-3 w-3" />
+                Files
               </TabsTrigger>
             </TabsList>
 
@@ -97,6 +102,10 @@ export function AiPanel({ noteId }: AiPanelProps) {
 
               <TabsContent value="mindmap" className="mt-0 focus-visible:ring-0">
                 <MindMapTab root={content.mindmap} />
+              </TabsContent>
+
+              <TabsContent value="attachments" className="mt-0 focus-visible:ring-0">
+                <NoteAttachmentsPanel noteId={noteId} />
               </TabsContent>
             </ScrollArea>
           </Tabs>

@@ -8,11 +8,13 @@ import { NoteTagSelector } from "@/components/note/note-tag-selector"
 import { NoteBacklinksPanel } from "@/components/note/note-backlinks-panel"
 import { NoteShareToggle } from "@/components/note/note-share-toggle"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useNoteChannel } from "@/hooks/use-note-channel"
 
 export default function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
   const { data: note, isLoading } = useNote(id)
   const { mutate: updateNote } = useUpdateNote(id)
+  const { remoteUpdate } = useNoteChannel(id)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   function scheduleUpdate(patch: { title?: string; content?: string }) {
@@ -49,7 +51,14 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
         {/* Toolbar */}
         <div className="flex items-center justify-between px-8 pt-4 pb-2">
           <NoteTagSelector noteId={id} attachedTags={note.tags ?? []} />
-          <NoteShareToggle note={note} />
+          <div className="flex items-center gap-2">
+            {remoteUpdate && (
+              <span className="text-[11px] text-muted-foreground animate-pulse">
+                Updated remotely
+              </span>
+            )}
+            <NoteShareToggle note={note} />
+          </div>
         </div>
 
         {/* Editor */}

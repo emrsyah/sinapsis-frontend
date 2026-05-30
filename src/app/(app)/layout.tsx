@@ -41,6 +41,7 @@ import { SidebarAuth } from "@/components/ui/sidebar-auth"
 import { useAuthStore } from "@/stores/authStore"
 import { useFolders, useCreateFolder, useUpdateFolder, useDeleteFolder } from "@/queries/use-folders"
 import { useNotes, useCreateNote, useDeleteNote } from "@/queries/use-notes"
+import { useUserChannel } from "@/hooks/use-user-channel"
 import type { Folder as FolderType, Note } from "@/types"
 
 // ---------------------------------------------------------------------------
@@ -402,6 +403,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const router = useRouter()
   const { data: folders } = useFolders()
+  useUserChannel()
 
   const isHome = pathname === "/"
   const isTrash = pathname.startsWith("/trash")
