@@ -23,6 +23,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import { TagSection } from "@/components/tag-section/tag-section"
+import { SidebarAuth } from "@/components/ui/sidebar-auth"
+import { useAuthStore } from "@/stores/authStore"
 
 // ---------------------------------------------------------------------------
 // Sidebar 1
@@ -41,6 +43,7 @@ function Sidebar1({
 }) {
   const router = useRouter()
   const [notesOpen, setNotesOpen] = React.useState(true)
+  const { user } = useAuthStore()
 
   function goHome() {
     router.push("/")
@@ -54,6 +57,16 @@ function Sidebar1({
   function goTrash() {
     const first = TRASH_NOTES[0]
     if (first) router.push(`/trash/${first.id}`)
+  }
+
+  function handleAddNote(e: React.MouseEvent) {
+    e.stopPropagation() // Biar pas diklik, foldernya ga ikut nutup/buka
+    if (!user) {
+      // Kalau belum login, tendang ke page auth
+      router.push("/auth")
+    } else {
+      console.log("Klik nambah note baru")
+    }
   }
 
   const navItem = (
@@ -172,6 +185,11 @@ function Sidebar1({
           <span className="flex-1">Trash</span>
           <span className="text-[10px] text-muted-foreground/50">{TRASH_NOTES.length}</span>
         </button>
+      </div>
+      <Separator />
+      
+      <div className="p-2">
+        <SidebarAuth />
       </div>
     </aside>
   )
