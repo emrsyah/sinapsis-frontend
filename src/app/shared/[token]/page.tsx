@@ -6,6 +6,15 @@ import { api, ApiError } from "@/lib/api"
 import { Skeleton } from "@/components/ui/skeleton"
 import type { Note } from "@/types"
 
+import "@/components/tiptap-node/blockquote-node/blockquote-node.scss"
+import "@/components/tiptap-node/code-block-node/code-block-node.scss"
+import "@/components/tiptap-node/horizontal-rule-node/horizontal-rule-node.scss"
+import "@/components/tiptap-node/list-node/list-node.scss"
+import "@/components/tiptap-node/image-node/image-node.scss"
+import "@/components/tiptap-node/heading-node/heading-node.scss"
+import "@/components/tiptap-node/paragraph-node/paragraph-node.scss"
+import "@/components/tiptap-templates/simple/simple-editor.scss"
+
 function useSharedNote(token: string) {
   return useQuery({
     queryKey: ['shared', token],
@@ -54,8 +63,6 @@ export default function SharedNotePage({ params }: { params: Promise<{ token: st
     month: "long", day: "numeric", year: "numeric",
   })
 
-  const content = note.content?.replace(/<[^>]+>/g, "") ?? ""
-
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-8 py-16">
@@ -90,9 +97,11 @@ export default function SharedNotePage({ params }: { params: Promise<{ token: st
 
         <hr className="my-8" />
 
-        <div className="prose prose-neutral dark:prose-invert max-w-none text-sm leading-relaxed whitespace-pre-wrap">
-          {content}
-        </div>
+        <div
+          className="tiptap ProseMirror simple-editor"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: note.content ?? "" }}
+        />
       </div>
     </div>
   )

@@ -37,6 +37,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { TagSection } from "@/components/tag-section/tag-section"
+import type { Tag as TagType } from "@/types"
 import { SidebarAuth } from "@/components/ui/sidebar-auth"
 import { useAuthStore } from "@/stores/authStore"
 import { useFolders, useCreateFolder, useUpdateFolder, useDeleteFolder } from "@/queries/use-folders"
@@ -187,8 +188,15 @@ function FolderItem({
 // ---------------------------------------------------------------------------
 
 function Sidebar1({
-  activeFolderId, isHome, isTrash, onFolderSelect,
-}: { activeFolderId: string | null; isHome: boolean; isTrash: boolean; onFolderSelect: (id: string) => void }) {
+  activeFolderId, activeTagId, isHome, isTrash, onFolderSelect, onTagSelect,
+}: {
+  activeFolderId: string | null
+  activeTagId: string | null
+  isHome: boolean
+  isTrash: boolean
+  onFolderSelect: (id: string) => void
+  onTagSelect: (tag: TagType) => void
+}) {
   const router = useRouter()
   const [notesOpen, setNotesOpen] = React.useState(true)
   const [newFolderOpen, setNewFolderOpen] = React.useState(false)
@@ -273,7 +281,7 @@ function Sidebar1({
           </div>
 
           <Separator />
-          <TagSection />
+          <TagSection activeTagId={activeTagId} onTagSelect={onTagSelect} />
         </div>
 
         <Separator />
@@ -334,10 +342,12 @@ function NoteListItem({ note, isActive, onClick }: { note: Note; isActive: boole
 }
 
 function Sidebar2({
-  label, folderId, isTrash, activeNoteId,
-}: { label: string; folderId: string | null; isTrash: boolean; activeNoteId: string | null }) {
+  label, folderId, tagId, isTrash, activeNoteId,
+}: { label: string; folderId: string | null; tagId: string | null; isTrash: boolean; activeNoteId: string | null }) {
   const router = useRouter()
-  const { data: notes, isLoading } = useNotes(isTrash ? { trash: true } : folderId ? { folderId } : {})
+  const { data: notes, isLoading } = useNotes(
+    isTrash ? { trash: true } : tagId ? { tagId } : folderId ? { folderId } : {}
+  )
   const { mutate: createNote, isPending: creating } = useCreateNote()
 
   function handleCreateNote() {
@@ -419,6 +429,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // The note editor page will pass folder context up via URL in Phase 4
   // For now we derive it from the note detail query cache
   const [activeFolderId, setActiveFolderId] = React.useState<string | null>(null)
+  const [activeTag, setActiveTag] = React.useState<TagType | null>(null)
 
   function getFolderName(id: string | null): string {
     if (!id || !folders) return ""
@@ -433,28 +444,41 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return findName(folders)
   }
 
-  const sidebar2Label = isTrash ? "Trash" : getFolderName(activeFolderId)
+  const sidebar2Label = isTrash ? "Trash" : activeTag ? activeTag.name : getFolderName(activeFolderId)
 
   function handleFolderSelect(folderId: string) {
     setActiveFolderId(folderId)
+    setActiveTag(null)
     router.push(`/notes?folder=${folderId}`)
   }
 
-  const showSidebar2 = isNote || isTrash || pathname.startsWith("/notes")
+  function handleTagSelect(tag: TagType) {
+    if (activeTag?.id === tag.id) {
+      setActiveTag(null)
+      return
+    }
+    setActiveTag(tag)
+    setActiveFolderId(null)
+  }
+
+  const showSidebar2 = isNote || isTrash || pathname.startsWith("/notes") || activeTag !== null
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar1
         activeFolderId={activeFolderId}
+        activeTagId={activeTag?.id ?? null}
         isHome={isHome}
         isTrash={isTrash}
         onFolderSelect={handleFolderSelect}
+        onTagSelect={handleTagSelect}
       />
 
       {showSidebar2 && (
         <Sidebar2
           label={sidebar2Label}
           folderId={activeFolderId}
+          tagId={activeTag?.id ?? null}
           isTrash={isTrash}
           activeNoteId={activeNoteId}
         />
