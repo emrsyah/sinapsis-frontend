@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { ChevronDown, ChevronRight, Pencil, Plus, Tag, Trash2 } from "lucide-react"
-
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -13,35 +12,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
-import { useTags } from "@/stores/tag-provider"
-import { type Tag as TagType } from "@/stores/tagStore"
+import { Skeleton } from "@/components/ui/skeleton"
+import { useTags, useCreateTag, useUpdateTag, useDeleteTag } from "@/queries/use-tags"
+import type { Tag as TagType } from "@/types"
 
-// ---------------------------------------------------------------------------
-// Color palette
-// ---------------------------------------------------------------------------
 const TAG_COLORS = [
-  "#6366f1",
-  "#ec4899",
-  "#f59e0b",
-  "#10b981",
-  "#3b82f6",
-  "#8b5cf6",
-  "#ef4444",
-  "#14b8a6",
-  "#f97316",
-  "#84cc16",
+  "#6366f1", "#ec4899", "#f59e0b", "#10b981",
+  "#3b82f6", "#8b5cf6", "#ef4444", "#14b8a6",
+  "#f97316", "#84cc16",
 ]
 
-// ---------------------------------------------------------------------------
-// Color Picker
-// ---------------------------------------------------------------------------
-function ColorPicker({
-  selected,
-  onChange,
-}: {
-  selected: string
-  onChange: (c: string) => void
-}) {
+function ColorPicker({ selected, onChange }: { selected: string; onChange: (c: string) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
       {TAG_COLORS.map((color) => (
@@ -61,18 +42,14 @@ function ColorPicker({
   )
 }
 
-// ---------------------------------------------------------------------------
-// Add Tag Dialog Content
-// ---------------------------------------------------------------------------
 function AddTagDialogContent({ onClose }: { onClose: () => void }) {
   const [name, setName] = React.useState("")
   const [color, setColor] = React.useState(TAG_COLORS[0])
-  const { addTag } = useTags()
+  const { mutate: createTag, isPending } = useCreateTag()
 
   function handleSubmit() {
     if (!name.trim()) return
-    addTag(name, color)
-    onClose()
+    createTag({ name: name.trim(), color }, { onSuccess: onClose })
   }
 
   return (
@@ -97,35 +74,25 @@ function AddTagDialogContent({ onClose }: { onClose: () => void }) {
         </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" size="sm" onClick={onClose}>
+        <Button variant="outline" size="sm" onClick={onClose} disabled={isPending}>
           Batal
         </Button>
-        <Button size="sm" onClick={handleSubmit} disabled={!name.trim()}>
-          Tambah
+        <Button size="sm" onClick={handleSubmit} disabled={!name.trim() || isPending}>
+          {isPending ? "Menambah..." : "Tambah"}
         </Button>
       </DialogFooter>
     </>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Edit Tag Dialog Content
-// ---------------------------------------------------------------------------
-function EditTagDialogContent({
-  tag,
-  onClose,
-}: {
-  tag: TagType
-  onClose: () => void
-}) {
+function EditTagDialogContent({ tag, onClose }: { tag: TagType; onClose: () => void }) {
   const [name, setName] = React.useState(tag.name)
-  const [color, setColor] = React.useState(tag.color)
-  const { updateTag } = useTags()
+  const [color, setColor] = React.useState(tag.color ?? TAG_COLORS[0])
+  const { mutate: updateTag, isPending } = useUpdateTag()
 
   function handleSubmit() {
     if (!name.trim()) return
-    updateTag(tag.id, name, color)
-    onClose()
+    updateTag({ id: tag.id, data: { name: name.trim(), color } }, { onSuccess: onClose })
   }
 
   return (
@@ -149,22 +116,19 @@ function EditTagDialogContent({
         </div>
       </div>
       <DialogFooter>
-        <Button variant="outline" size="sm" onClick={onClose}>
+        <Button variant="outline" size="sm" onClick={onClose} disabled={isPending}>
           Batal
         </Button>
-        <Button size="sm" onClick={handleSubmit} disabled={!name.trim()}>
-          Simpan
+        <Button size="sm" onClick={handleSubmit} disabled={!name.trim() || isPending}>
+          {isPending ? "Menyimpan..." : "Simpan"}
         </Button>
       </DialogFooter>
     </>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Single Tag Item Row
-// ---------------------------------------------------------------------------
 function TagItem({ tag }: { tag: TagType }) {
-  const { deleteTag } = useTags()
+  const { mutate: deleteTag } = useDeleteTag()
   const [editOpen, setEditOpen] = React.useState(false)
   const [hovered, setHovered] = React.useState(false)
 
@@ -181,16 +145,11 @@ function TagItem({ tag }: { tag: TagType }) {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
-        {/* Color dot as icon */}
         <span
           className="size-3.5 shrink-0 rounded-full"
-          style={{ backgroundColor: tag.color }}
+          style={{ backgroundColor: tag.color ?? "#6366f1" }}
         />
-
-        {/* Name */}
         <span className="flex-1 truncate text-left">{tag.name}</span>
-
-        {/* Action buttons — show on hover */}
         {hovered ? (
           <div className="flex items-center gap-0.5">
             <span
@@ -216,17 +175,13 @@ function TagItem({ tag }: { tag: TagType }) {
   )
 }
 
-// ---------------------------------------------------------------------------
-// Main TagSection
-// ---------------------------------------------------------------------------
 export function TagSection() {
-  const { tags } = useTags()
+  const { data: tags, isLoading } = useTags()
   const [open, setOpen] = React.useState(true)
   const [addOpen, setAddOpen] = React.useState(false)
 
   return (
     <>
-      {/* Add Tag Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-sm">
           <AddTagDialogContent onClose={() => setAddOpen(false)} />
@@ -234,7 +189,6 @@ export function TagSection() {
       </Dialog>
 
       <div className={cn("flex flex-col px-2 py-2", open ? "flex-1 overflow-hidden" : "shrink-0")}>
-        {/* Section header */}
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm font-medium text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground transition-colors"
@@ -249,25 +203,25 @@ export function TagSection() {
           <span
             role="button"
             aria-label="Tambah tag"
-            onClick={(e) => {
-              e.stopPropagation()
-              setAddOpen(true)
-            }}
+            onClick={(e) => { e.stopPropagation(); setAddOpen(true) }}
             className="flex h-5 w-5 items-center justify-center rounded hover:bg-sidebar-accent"
           >
             <Plus className="h-3 w-3" />
           </span>
         </button>
 
-        {/* Tag list */}
         {open && (
           <div className="mt-0.5 flex flex-col gap-0.5 overflow-y-auto pl-2">
-            {tags.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full rounded-md" />
+              ))
+            ) : tags?.length === 0 ? (
               <p className="px-2 py-2 text-[11px] italic text-muted-foreground/50">
                 Belum ada tag. Klik + untuk tambah.
               </p>
             ) : (
-              tags.map((tag) => <TagItem key={tag.id} tag={tag} />)
+              tags?.map((tag) => <TagItem key={tag.id} tag={tag} />)
             )}
           </div>
         )}
