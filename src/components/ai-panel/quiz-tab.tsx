@@ -1,37 +1,40 @@
 "use client"
 
 import * as React from "react"
-import { CheckCircle2, XCircle, ChevronRight, Trophy } from "lucide-react"
+import { CheckCircle2, XCircle, ChevronRight, Loader2, RotateCw, Sparkles, Trophy } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
-import type { QuizQuestion } from "./types"
+import type { QuizContent } from "@/types"
 
 interface QuizTabProps {
-  questions: QuizQuestion[]
+  content: QuizContent | undefined
+  isLoading: boolean
+  onGenerate: () => void
 }
 
 type AnswerState = "unanswered" | "correct" | "wrong"
 
-export function QuizTab({ questions }: QuizTabProps) {
+export function QuizTab({ content, isLoading, onGenerate }: QuizTabProps) {
   const [index, setIndex] = React.useState(0)
   const [selected, setSelected] = React.useState<number | null>(null)
   const [score, setScore] = React.useState(0)
   const [finished, setFinished] = React.useState(false)
 
+  const questions = content?.questions ?? []
   const question = questions[index]
   const answered = selected !== null
   const answerState: AnswerState = !answered
     ? "unanswered"
-    : question.options[selected].correct
+    : selected === question?.correct_index
     ? "correct"
     : "wrong"
 
   function handleSelect(optionIndex: number) {
     if (answered) return
     setSelected(optionIndex)
-    if (question.options[optionIndex].correct) {
+    if (optionIndex === question.correct_index) {
       setScore((s) => s + 1)
     }
   }
@@ -52,11 +55,37 @@ export function QuizTab({ questions }: QuizTabProps) {
     setFinished(false)
   }
 
-  // Reset when questions change (note switch)
   React.useEffect(() => {
     handleRestart()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [questions])
+  }, [content])
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 p-8 text-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <p className="text-xs text-muted-foreground">Generating quiz…</p>
+      </div>
+    )
+  }
+
+  if (!content || questions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 p-6 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+          <Sparkles className="h-5 w-5 text-primary" />
+        </div>
+        <div>
+          <p className="text-sm font-medium">No quiz yet</p>
+          <p className="mt-1 text-xs text-muted-foreground">Generate a quiz from this note</p>
+        </div>
+        <Button size="sm" className="gap-1.5" onClick={onGenerate}>
+          <Sparkles className="h-3.5 w-3.5" />
+          Generate
+        </Button>
+      </div>
+    )
+  }
 
   const progress = ((index + (answered ? 1 : 0)) / questions.length) * 100
 
@@ -72,9 +101,15 @@ export function QuizTab({ questions }: QuizTabProps) {
           </p>
         </div>
         <Progress value={pct} className="w-full" />
-        <Button size="sm" onClick={handleRestart} className="mt-2">
-          Try again
-        </Button>
+        <div className="flex gap-2 mt-2">
+          <Button size="sm" onClick={handleRestart}>
+            Try again
+          </Button>
+          <Button size="sm" variant="outline" className="gap-1.5" onClick={onGenerate}>
+            <RotateCw className="h-3 w-3" />
+            Regenerate
+          </Button>
+        </div>
       </div>
     )
   }
@@ -86,9 +121,18 @@ export function QuizTab({ questions }: QuizTabProps) {
         <span className="text-xs text-muted-foreground">
           Question {index + 1} of {questions.length}
         </span>
-        <Badge variant="secondary" className="text-[10px]">
-          Score: {score}
-        </Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge variant="secondary" className="text-[10px]">Score: {score}</Badge>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 text-muted-foreground"
+            title="Regenerate"
+            onClick={onGenerate}
+          >
+            <RotateCw className="h-3 w-3" />
+          </Button>
+        </div>
       </div>
 
       <Progress value={progress} className="h-1" />
@@ -102,7 +146,7 @@ export function QuizTab({ questions }: QuizTabProps) {
       <div className="flex flex-col gap-2">
         {question.options.map((option, i) => {
           const isSelected = selected === i
-          const isCorrect = option.correct
+          const isCorrect = i === question.correct_index
 
           let variant: string = "default"
           if (answered) {
@@ -142,7 +186,7 @@ export function QuizTab({ questions }: QuizTabProps) {
                   String.fromCharCode(65 + i)
                 )}
               </span>
-              {option.label}
+              {option}
             </button>
           )
         })}

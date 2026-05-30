@@ -82,7 +82,7 @@ export default function SearchPage() {
           </div>
         ) : (
           <div className="mx-auto max-w-2xl px-8 py-6 space-y-2">
-            {notes.map((note) => (
+            {notes?.map((note) => (
               <NoteResult
                 key={note.id}
                 note={note}
