@@ -1,12 +1,15 @@
 'use client'
 
 import { use, useEffect, useRef, useState, useCallback } from "react"
-import { useNote, useUpdateNote } from "@/queries/use-notes"
+import { useRouter } from "next/navigation"
+import { Pin, PinOff, Trash2 } from "lucide-react"
+import { useNote, useUpdateNote, useTogglePinNote, useDeleteNote } from "@/queries/use-notes"
 import { AiPanel } from "@/components/ai-panel"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
 import { NoteTagSelector } from "@/components/note/note-tag-selector"
 import { NoteBacklinksPanel } from "@/components/note/note-backlinks-panel"
 import { NoteShareToggle } from "@/components/note/note-share-toggle"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useNoteChannel } from "@/hooks/use-note-channel"
 
@@ -48,9 +51,12 @@ function SaveStatusIndicator({ status, lastSaved }: { status: SaveStatus; lastSa
 }
 
 export default function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const router = useRouter()
   const { id } = use(params)
   const { data: note, isLoading } = useNote(id)
   const { mutate: updateNote } = useUpdateNote(id)
+  const { mutate: togglePin, isPending: pinning } = useTogglePinNote(id)
+  const { mutate: deleteNote, isPending: deleting } = useDeleteNote()
   const { remoteUpdate } = useNoteChannel(id)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
@@ -123,13 +129,36 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
         {/* Meta bar: tags | save status | remote update | share */}
         <div className="flex items-center justify-between px-8 pt-1 pb-2 gap-2">
           <NoteTagSelector noteId={id} attachedTags={note.tags ?? []} />
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1">
             <SaveStatusIndicator status={saveStatus} lastSaved={lastSaved} />
             {remoteUpdate && (
-              <span className="text-[11px] text-muted-foreground animate-pulse">
+              <span className="text-[11px] text-muted-foreground animate-pulse ml-2">
                 Updated remotely
               </span>
             )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground"
+              title={note.is_pinned ? "Unpin note" : "Pin note"}
+              disabled={pinning}
+              onClick={() => togglePin(!note.is_pinned)}
+            >
+              {note.is_pinned
+                ? <PinOff className="h-3.5 w-3.5 text-primary" />
+                : <Pin className="h-3.5 w-3.5" />
+              }
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+              title="Move to trash"
+              disabled={deleting}
+              onClick={() => deleteNote(id, { onSuccess: () => router.push("/notes") })}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
             <NoteShareToggle note={note} />
           </div>
         </div>
@@ -139,6 +168,7 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
           <SimpleEditor
             content={note.content ?? null}
             onChange={(html) => scheduleUpdate({ content: html })}
+            noteId={id}
           />
         </div>
 

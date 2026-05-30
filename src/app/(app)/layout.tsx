@@ -12,7 +12,10 @@ import {
   MoreHorizontal,
   NotebookPen,
   Pencil,
+  Pin,
+  PinOff,
   Plus,
+  RotateCcw,
   Search,
   Settings,
   Trash2,
@@ -37,11 +40,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { TagSection } from "@/components/tag-section/tag-section"
+import { SearchDialog } from "@/components/search-dialog"
 import type { Tag as TagType } from "@/types"
 import { SidebarAuth } from "@/components/ui/sidebar-auth"
 import { useAuthStore } from "@/stores/authStore"
 import { useFolders, useCreateFolder, useUpdateFolder, useDeleteFolder } from "@/queries/use-folders"
-import { useNotes, useCreateNote, useDeleteNote } from "@/queries/use-notes"
+import { useNotes, useCreateNote, useDeleteNote, useRestoreNote, useForceDeleteNote, useTogglePinNote } from "@/queries/use-notes"
 import { useUserChannel } from "@/hooks/use-user-channel"
 import type { Folder as FolderType, Note } from "@/types"
 
@@ -200,7 +204,19 @@ function Sidebar1({
   const router = useRouter()
   const [notesOpen, setNotesOpen] = React.useState(true)
   const [newFolderOpen, setNewFolderOpen] = React.useState(false)
+  const [searchOpen, setSearchOpen] = React.useState(false)
   const { user } = useAuthStore()
+
+  React.useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault()
+        setSearchOpen((v) => !v)
+      }
+    }
+    document.addEventListener("keydown", onKeyDown)
+    return () => document.removeEventListener("keydown", onKeyDown)
+  }, [])
   const { data: folders, isLoading: foldersLoading } = useFolders()
   const { data: trashNotes } = useNotes({ trash: true })
 
@@ -221,6 +237,7 @@ function Sidebar1({
   return (
     <>
       <NewFolderDialog open={newFolderOpen} onOpenChange={setNewFolderOpen} />
+      <SearchDialog open={searchOpen} onOpenChange={setSearchOpen} />
       <aside className="flex h-full w-56 flex-col border-r bg-sidebar">
         <div className="flex items-center gap-2 px-3 py-3">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
@@ -236,7 +253,14 @@ function Sidebar1({
 
         <div className="flex flex-col gap-0.5 px-2 py-2">
           {navItem("Home", <Home className="h-4 w-4 shrink-0" />, isHome, () => router.push("/"))}
-          {navItem("Search", <Search className="h-4 w-4 shrink-0" />, false, () => {})}
+          <button
+            onClick={() => setSearchOpen(true)}
+            className="flex w-full items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground"
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            <span className="flex-1 text-left">Search</span>
+            <span className="text-[10px] text-muted-foreground/50 font-mono">⌘K</span>
+          </button>
         </div>
 
         <Separator />
@@ -315,29 +339,90 @@ function Sidebar1({
 // Sidebar 2 — Note List
 // ---------------------------------------------------------------------------
 
-function NoteListItem({ note, isActive, onClick }: { note: Note; isActive: boolean; onClick: () => void }) {
+function NoteListItem({
+  note, isActive, isTrash, onClick,
+}: {
+  note: Note
+  isActive: boolean
+  isTrash: boolean
+  onClick: () => void
+}) {
+  const router = useRouter()
+  const { mutate: deleteNote } = useDeleteNote()
+  const { mutate: restoreNote } = useRestoreNote()
+  const { mutate: forceDeleteNote } = useForceDeleteNote()
+  const { mutate: togglePin } = useTogglePinNote(note.id)
+
   const preview = note.content
     ? note.content.replace(/<[^>]+>/g, "").slice(0, 80)
     : ""
   const date = new Date(note.updated_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
 
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "w-full rounded-md px-3 py-2.5 text-left transition-colors",
-        isActive ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-accent"
-      )}
-    >
-      <div className="flex items-start gap-2">
-        <FileText className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium leading-snug">{note.title || "Untitled"}</p>
-          {preview && <p className="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">{preview}</p>}
-          <p className="mt-1 text-[10px] text-muted-foreground/50">{date}</p>
-        </div>
+    <DropdownMenu>
+      <div className="group relative">
+        <button
+          onClick={onClick}
+          className={cn(
+            "w-full rounded-md px-3 py-2.5 text-left transition-colors",
+            isActive ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-accent"
+          )}
+        >
+          <div className="flex items-start gap-2">
+            <FileText className={cn("mt-0.5 h-3.5 w-3.5 shrink-0", isActive ? "text-primary" : "text-muted-foreground")} />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1">
+                <p className="truncate text-xs font-medium leading-snug">{note.title || "Untitled"}</p>
+                {note.is_pinned && <Pin className="h-2.5 w-2.5 shrink-0 text-primary" />}
+              </div>
+              {preview && <p className="mt-0.5 truncate text-[11px] leading-snug text-muted-foreground">{preview}</p>}
+              <p className="mt-1 text-[10px] text-muted-foreground/50">{date}</p>
+            </div>
+          </div>
+        </button>
+        <DropdownMenuTrigger asChild>
+          <button className="absolute right-1.5 top-1.5 hidden group-hover:flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground">
+            <MoreHorizontal className="h-3 w-3" />
+          </button>
+        </DropdownMenuTrigger>
       </div>
-    </button>
+      <DropdownMenuContent align="end" className="w-44 bg-[#1C1C1C] border-[#2A2A2A]">
+        {isTrash ? (
+          <>
+            <DropdownMenuItem
+              onClick={() => restoreNote(note.id, { onSuccess: () => router.push(`/notes/${note.id}`) })}
+              className="text-muted-foreground hover:text-white cursor-pointer"
+            >
+              <RotateCcw className="mr-2 h-3.5 w-3.5" />Restore
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => forceDeleteNote(note.id, { onSuccess: () => router.push("/trash") })}
+              className="text-destructive hover:text-destructive cursor-pointer"
+            >
+              <Trash2 className="mr-2 h-3.5 w-3.5" />Delete permanently
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <>
+            <DropdownMenuItem
+              onClick={() => togglePin(!note.is_pinned)}
+              className="text-muted-foreground hover:text-white cursor-pointer"
+            >
+              {note.is_pinned
+                ? <><PinOff className="mr-2 h-3.5 w-3.5" />Unpin</>
+                : <><Pin className="mr-2 h-3.5 w-3.5" />Pin</>
+              }
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => deleteNote(note.id, { onSuccess: () => { if (isActive) router.push("/notes") } })}
+              className="text-destructive hover:text-destructive cursor-pointer"
+            >
+              <Trash2 className="mr-2 h-3.5 w-3.5" />Move to trash
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
@@ -390,6 +475,7 @@ function Sidebar2({
                 key={note.id}
                 note={note}
                 isActive={activeNoteId === note.id}
+                isTrash={isTrash}
                 onClick={() => router.push(isTrash ? `/trash/${note.id}` : `/notes/${note.id}`)}
               />
             ))}
@@ -461,7 +547,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     setActiveFolderId(null)
   }
 
-  const showSidebar2 = isNote || isTrash || pathname.startsWith("/notes") || activeTag !== null
+  const isSearch = pathname.startsWith("/search")
+  const showSidebar2 = !isSearch && (isNote || isTrash || pathname.startsWith("/notes") || activeTag !== null)
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

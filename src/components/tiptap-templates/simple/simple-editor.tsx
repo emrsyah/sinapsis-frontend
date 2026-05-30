@@ -68,12 +68,11 @@ import { useCursorVisibility } from "@/hooks/use-cursor-visibility"
 import { ThemeToggle } from "@/components/tiptap-templates/simple/theme-toggle"
 
 // --- Lib ---
-import { handleImageUpload, MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import { MAX_FILE_SIZE } from "@/lib/tiptap-utils"
+import { config } from "@/lib/config"
 
 // --- Styles ---
 import "@/components/tiptap-templates/simple/simple-editor.scss"
-
-import defaultContent from "@/components/tiptap-templates/simple/data/content.json"
 
 const MainToolbarContent = ({
   onHighlighterClick,
@@ -183,12 +182,48 @@ const MobileToolbarContent = ({
   </>
 )
 
+async function uploadAttachment(
+  noteId: string,
+  file: File,
+  onProgress?: (event: { progress: number }) => void,
+  abortSignal?: AbortSignal
+): Promise<string> {
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`File size exceeds ${MAX_FILE_SIZE / (1024 * 1024)}MB limit`)
+  }
+
+  const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const res = await fetch(`${config.apiUrl}/v1/notes/${noteId}/attachments`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+    signal: abortSignal,
+  })
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null)
+    throw new Error(data?.message ?? "Upload failed")
+  }
+
+  onProgress?.({ progress: 100 })
+  const data = await res.json()
+  return data.file_url as string
+}
+
 export function SimpleEditor({
   content,
   onChange,
+  noteId,
 }: {
   content?: string | null
   onChange?: (html: string) => void
+  noteId?: string
 }) {
   const isMobile = useIsBreakpoint()
   const { height } = useWindowSize()
@@ -230,11 +265,13 @@ export function SimpleEditor({
         accept: "image/*",
         maxSize: MAX_FILE_SIZE,
         limit: 3,
-        upload: handleImageUpload,
+        upload: noteId
+          ? (file, onProgress, abortSignal) => uploadAttachment(noteId, file, onProgress, abortSignal)
+          : () => Promise.reject(new Error("No note ID provided for upload")),
         onError: (error) => console.error("Upload failed:", error),
       }),
     ],
-    content: content ?? defaultContent,
+    content: content ?? "",
     onUpdate({ editor }) {
       onChange?.(editor.getHTML())
     },

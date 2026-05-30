@@ -73,6 +73,21 @@ export function useUpdateNote(id: string) {
   })
 }
 
+export function useTogglePinNote(id: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (isPinned: boolean) => api.patch<Note>(`/v1/notes/${id}`, { is_pinned: isPinned }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(noteKeys.detail(id), updated)
+      queryClient.invalidateQueries({ queryKey: noteKeys.lists() })
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : 'Failed to update pin status')
+    },
+  })
+}
+
 export function useDeleteNote() {
   const queryClient = useQueryClient()
 

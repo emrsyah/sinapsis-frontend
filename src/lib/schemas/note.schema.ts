@@ -8,6 +8,7 @@ export interface Note {
   title: string
   content: string | null
   is_published: boolean
+  is_pinned: boolean
   share_token: string | null
   share_url: string | null
   deleted_at: string | null
@@ -25,6 +26,7 @@ export const NoteSchema: z.ZodType<Note> = z.object({
   title: z.string(),
   content: z.string().nullable(),
   is_published: z.boolean(),
+  is_pinned: z.boolean(),
   share_token: z.string().nullable(),
   share_url: z.string().nullable(),
   deleted_at: z.string().nullable(),
