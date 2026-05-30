@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuthStore } from '@/stores/authStore'
+import { useLogout } from '@/queries/use-auth'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -13,13 +14,14 @@ import { LogIn, LogOut } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export function SidebarAuth() {
-  const { user, logout } = useAuthStore()
+  const { user } = useAuthStore()
   const router = useRouter()
+  const { mutate: logout, isPending } = useLogout()
 
   if (!user) {
     return (
-      <Button 
-        variant="ghost" 
+      <Button
+        variant="ghost"
         className="w-full justify-start text-muted-foreground hover:text-white hover:bg-white/10"
         onClick={() => router.push('/auth')}
       >
@@ -44,12 +46,13 @@ export function SidebarAuth() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 mb-2 bg-[#1C1C1C] border-[#2A2A2A]">
-        <DropdownMenuItem 
-          onClick={() => logout()} 
+        <DropdownMenuItem
+          onClick={() => logout()}
+          disabled={isPending}
           className="text-muted-foreground hover:text-white cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Log out</span>
+          <span>{isPending ? 'Logging out...' : 'Log out'}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

@@ -3,6 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore, type AuthUser } from '@/stores/authStore'
+import { api } from '@/lib/api'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -18,26 +19,22 @@ export default function AuthCallbackPage() {
     const error = searchParams.get('error')
 
     if (error || !token) {
-      router.replace('/auth')
+      router.replace('/auth?error=google_failed')
       return
     }
 
-    fetch('http://127.0.0.1:8000/api/v1/auth/me', {
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error('Failed to fetch user')
-        return res.json() as Promise<AuthUser>
-      })
+    // Temporarily store token so api client can pick it up for the /me call
+    localStorage.setItem('auth_token', token)
+
+    api
+      .get<AuthUser>('/v1/auth/me')
       .then((user) => {
         setAuth(token, user)
         router.replace('/')
       })
       .catch(() => {
-        router.replace('/auth')
+        localStorage.removeItem('auth_token')
+        router.replace('/auth?error=google_failed')
       })
   }, [searchParams, setAuth, router])
 
