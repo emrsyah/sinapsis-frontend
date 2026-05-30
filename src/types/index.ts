@@ -2,7 +2,7 @@
 
 import { AttachmentSchema, StoreAttachmentSchema } from '@/lib/schemas/attachment.schema'
 import { AuthResponseSchema, LoginSchema, RegisterSchema } from '@/lib/schemas/auth.schema'
-import { FolderSchema, StoreFolderSchema, UpdateFolderSchema } from '@/lib/schemas/folder.schema'
+import { type FolderSchema, StoreFolderSchema, UpdateFolderSchema } from '@/lib/schemas/folder.schema'
 import { NoteSchema, StoreNoteSchema, UpdateNoteSchema } from '@/lib/schemas/note.schema'
 import { NoteLinkSchema } from '@/lib/schemas/noteLink.schema'
 import { PublishResponseSchema } from '@/lib/schemas/sharing.schema'
@@ -17,7 +17,7 @@ export type Register = z.infer<typeof RegisterSchema>
 export type Login = z.infer<typeof LoginSchema>
 export type AuthResponse = z.infer<typeof AuthResponseSchema>
 
-export type Folder = z.infer<typeof FolderSchema>
+export type Folder = FolderSchema
 export type StoreFolder = z.infer<typeof StoreFolderSchema>
 export type UpdateFolder = z.infer<typeof UpdateFolderSchema>
 

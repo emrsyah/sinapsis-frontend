@@ -1,14 +1,23 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-// This function can be marked `async` if using `await` inside
+const PUBLIC_PATHS = ['/auth', '/auth/callback', '/shared']
+
 export function proxy(request: NextRequest) {
-    return NextResponse.redirect(request.url)
+  const { pathname } = request.nextUrl
+  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p))
+
+  if (isPublic) return NextResponse.next()
+
+  const token = request.cookies.get('auth_token')?.value
+
+  if (!token) {
+    return NextResponse.redirect(new URL('/auth', request.url))
+  }
+
+  return NextResponse.next()
 }
 
-// Alternatively, you can use a default export:
-// export default function proxy(request: NextRequest) { ... }
-
 export const config = {
-    matcher: '/non-existing-page-change-this-later',
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|api).*)'],
 }
