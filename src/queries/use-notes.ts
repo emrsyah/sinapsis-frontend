@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { api, ApiError } from '@/lib/api'
-import type { Note, StoreNote, UpdateNote } from '@/types'
+import type { Note, NoteLink, StoreNote, UpdateNote } from '@/types'
 
 export const noteKeys = {
   all: ['notes'] as const,
@@ -114,6 +114,84 @@ export function useForceDeleteNote() {
     },
     onError: (error) => {
       toast.error(error instanceof ApiError ? error.message : 'Failed to delete note permanently')
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Tag attachment
+// ---------------------------------------------------------------------------
+
+export function useAttachTag(noteId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (tagId: string) => api.post(`/v1/notes/${noteId}/tags/${tagId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) })
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : 'Failed to attach tag')
+    },
+  })
+}
+
+export function useDetachTag(noteId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (tagId: string) => api.delete(`/v1/notes/${noteId}/tags/${tagId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) })
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : 'Failed to detach tag')
+    },
+  })
+}
+
+// ---------------------------------------------------------------------------
+// Backlinks & outgoing links
+// ---------------------------------------------------------------------------
+
+export const backlinkKeys = {
+  list: (noteId: string) => ['backlinks', noteId] as const,
+}
+
+export function useNoteBacklinks(noteId: string) {
+  return useQuery({
+    queryKey: backlinkKeys.list(noteId),
+    queryFn: () => api.get<{ backlinks: Note[] }>(`/v1/notes/${noteId}/backlinks`),
+    enabled: !!noteId,
+  })
+}
+
+export function useCreateNoteLink(noteId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (targetNoteId: string) =>
+      api.post<NoteLink>(`/v1/notes/${noteId}/links`, { target_note: targetNoteId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) })
+      queryClient.invalidateQueries({ queryKey: backlinkKeys.list(noteId) })
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : 'Failed to create link')
+    },
+  })
+}
+
+export function useDeleteNoteLink(noteId: string) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (targetId: string) => api.delete(`/v1/notes/${noteId}/links/${targetId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: noteKeys.detail(noteId) })
+    },
+    onError: (error) => {
+      toast.error(error instanceof ApiError ? error.message : 'Failed to delete link')
     },
   })
 }

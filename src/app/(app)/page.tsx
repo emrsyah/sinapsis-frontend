@@ -37,6 +37,22 @@ function NoteCard({ note, folderName }: { note: Note; folderName: string }) {
           <p className="mt-1 text-[12px] text-muted-foreground leading-relaxed line-clamp-3">{preview}</p>
         )}
       </div>
+      {note.tags && note.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {note.tags.slice(0, 3).map((tag) => (
+            <span
+              key={tag.id}
+              className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+              style={{
+                backgroundColor: `${tag.color ?? '#6366f1'}20`,
+                color: tag.color ?? '#6366f1',
+              }}
+            >
+              {tag.name}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="flex items-center gap-1 mt-auto pt-1">
         <Clock className="h-3 w-3 text-muted-foreground/50" />
         <span className="text-[10px] text-muted-foreground/50">{date}</span>

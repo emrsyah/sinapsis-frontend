@@ -1,19 +1,19 @@
 'use client'
 
-import { notFound } from "next/navigation"
 import { use, useEffect, useRef } from "react"
 import { useNote, useUpdateNote } from "@/queries/use-notes"
 import { AiPanel } from "@/components/ai-panel"
 import { SimpleEditor } from "@/components/tiptap-templates/simple/simple-editor"
+import { NoteTagSelector } from "@/components/note/note-tag-selector"
+import { NoteBacklinksPanel } from "@/components/note/note-backlinks-panel"
 import { Skeleton } from "@/components/ui/skeleton"
 
 export default function NoteDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const { data: note, isLoading, isError, error } = useNote(id)
+  const { data: note, isLoading } = useNote(id)
   const { mutate: updateNote } = useUpdateNote(id)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Autosave helper — debounced 1s
   function scheduleUpdate(patch: { title?: string; content?: string }) {
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => updateNote(patch), 1000)
@@ -34,7 +34,7 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
-  if (isError || !note) {
+  if (!note) {
     return (
       <div className="flex h-full items-center justify-center">
         <p className="text-sm text-muted-foreground">Note not found.</p>
@@ -44,9 +44,23 @@ export default function NoteDetailPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="flex h-full overflow-hidden">
-      <div className="flex flex-1 flex-col overflow-y-auto px-4">
-        <SimpleEditor />
+      <div className="flex flex-1 flex-col overflow-y-auto">
+        {/* Tags bar */}
+        <div className="px-8 pt-4 pb-2">
+          <NoteTagSelector noteId={id} attachedTags={note.tags ?? []} />
+        </div>
+
+        {/* Editor */}
+        <div className="flex-1 px-4">
+          <SimpleEditor />
+        </div>
+
+        {/* Backlinks */}
+        <div className="px-8 pb-6">
+          <NoteBacklinksPanel noteId={id} />
+        </div>
       </div>
+
       <AiPanel noteId={id} />
     </div>
   )
